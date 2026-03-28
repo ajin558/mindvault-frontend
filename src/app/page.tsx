@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
 import { 
   Menu, Plus, Send, Upload, Globe, 
@@ -328,8 +330,71 @@ export default function MindVaultChat() {
                     : "bg-transparent text-gray-200"}`}
                 >
                   {msg.role === "assistant" ? (
-                    <div className="prose prose-invert prose-p:leading-relaxed prose-pre:bg-[#1a1b26] prose-pre:border-white/10 max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <div className="prose prose-invert prose-p:leading-relaxed max-w-none">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          // 🎨 视觉升级 1：丝滑的代码高亮块 (带仿 Mac 视窗头部)
+                          code(props: any) {
+                            const { children, className, node, ...rest } = props;
+                            const match = /language-(\w+)/.exec(className || '');
+                            return match ? (
+                              <div className="rounded-lg overflow-hidden my-4 border border-white/10 shadow-2xl">
+                                <div className="flex items-center px-4 py-2 bg-[#1e1e1e] border-b border-white/5">
+                                  <div className="flex gap-1.5 mr-4">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+                                  </div>
+                                  <span className="text-xs text-gray-400 font-mono lowercase">{match[1]}</span>
+                                </div>
+                                <SyntaxHighlighter
+                                  style={vscDarkPlus as any}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  customStyle={{ margin: 0, padding: '1rem', background: '#0d0d0d', fontSize: '13px' }}
+                                  {...rest}
+                                >
+                                  {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                              </div>
+                            ) : (
+                              // 行内代码的高亮
+                              <code className="bg-blue-500/10 text-blue-300 px-1.5 py-0.5 rounded text-[13px] font-mono border border-blue-500/20" {...rest}>
+                                {children}
+                              </code>
+                            )
+                          },
+                          // 💻 视觉升级 2：极客风终端日志 (自动捕捉后端发来的 "> 💻 战略指派" 等文字)
+                          blockquote({node, children, ...props}) {
+                            return (
+                              <blockquote className="my-3 pl-4 border-l-2 border-emerald-500/50 bg-emerald-500/5 py-2.5 pr-4 rounded-r-lg shadow-inner" {...props}>
+                                <div className="text-[13px] text-emerald-400/90 font-mono flex items-center gap-2">
+                                  {children}
+                                </div>
+                              </blockquote>
+                            )
+                          },
+                          // 📊 视觉升级 3：SaaS 级精美数据表格
+                          table({node, ...props}) {
+                            return <div className="overflow-x-auto my-5 rounded-lg border border-white/10"><table className="w-full text-sm text-left border-collapse" {...props} /></div>
+                          },
+                          th({node, ...props}) {
+                            return <th className="px-4 py-3 bg-white/5 border-b border-white/10 font-semibold text-gray-200 whitespace-nowrap" {...props} />
+                          },
+                          td({node, ...props}) {
+                            return <td className="px-4 py-3 border-b border-white/5 text-gray-300" {...props} />
+                          },
+                          // 🖼️ 视觉升级 4：沙盒图表的全息悬浮投影
+                          img({node, ...props}) {
+                            return (
+                              <div className="my-5 p-2 rounded-xl bg-white/5 border border-white/10 inline-block shadow-2xl">
+                                <img className="rounded-lg max-w-full h-auto object-contain max-h-[400px]" {...props} alt="数据可视化图表" />
+                              </div>
+                            )
+                          }
+                        }}
+                      >
                         {msg.content || ""}
                       </ReactMarkdown>
                     </div>
