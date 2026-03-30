@@ -7,7 +7,7 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
 import { 
   Menu, Plus, Send, Upload, Globe, 
-  Bot, User, Trash2, CheckCircle2, MessageSquare
+  Bot, User, Trash2, CheckCircle2, MessageSquare, Image as ImageIcon, X
 } from "lucide-react";
 
 // 消息类型定义
@@ -46,9 +46,13 @@ export default function MindVaultChat() {
   
   // 🔴 核心新增 2：用于存放当前用户的“灵魂通行证”
   const [sessionId, setSessionId] = useState<string>("");
+
+  // 👁️ 视觉觉醒：存放图片的 Base64 数据
+  const [imageBase64, setImageBase64] = useState<string>("");
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // 用于触发图片上传
 
   // === 初始化与本地存储读取 ===
   useEffect(() => {
@@ -147,28 +151,57 @@ export default function MindVaultChat() {
     }
   };
 
+  // 👁️ 视觉觉醒：处理用户上传图片转 Base64
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          // 剥离 Base64 的头部（例如 data:image/jpeg;base64,）
+          const base64String = reader.result.replace(/^data:image\/[a-z]+;base64,/, "");
+          setImageBase64(base64String);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    // 清空 input 的 value，允许连续上传同一张图片
+    if (e.target) e.target.value = '';
+  };
+
   // === 发送消息 ===
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    // 允许仅发送图片（没有文本时默认带上提示词）
+    const effectiveInput = input.trim() || (imageBase64 ? "请帮我分析一下这张图。" : "");
+    if (!effectiveInput || isLoading) return;
 
-    const userMsg: Message = { role: "user", content: input };
+    // 记录下要发送的图片，防止在 await 期间状态被清空
+    const imageToSend = imageBase64;
+    
+    let displayContent = effectiveInput;
+    if (imageToSend) {
+        displayContent += "\n\n*[附带了一张视觉图像]*";
+    }
+
+    const userMsg: Message = { role: "user", content: displayContent };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setImageBase64(""); // 发送后立刻清空前端缓存的图片
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setIsLoading(true);
 
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
-      // ⚠️ 修复点：添加 /api 前缀以触发 Next.js 的 rewrite 代理
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMsg],
+          messages: [...messages, { role: "user", content: effectiveInput }], // 发送给后端的纯文本
           mode: "researcher",
           use_web_search: useWebSearch,
-          session_id: sessionId || `user_fallback_${Date.now()}`
+          session_id: sessionId || `user_fallback_${Date.now()}`,
+          image_base64: imageToSend // 👁️ 视觉觉醒：将图片数据发送给后端
         }),
       });
 
@@ -220,7 +253,6 @@ export default function MindVaultChat() {
     formData.append("file", file);
     setUploadStatus("uploading");
     try {
-      // ⚠️ 修复点：添加 /api 前缀以触发 Next.js 的 rewrite 代理
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       if (res.ok) setUploadStatus("success");
       else setUploadStatus("error");
@@ -288,7 +320,7 @@ export default function MindVaultChat() {
               <span className="truncate">
                 {uploadStatus === "uploading" ? "正在吞噬 PDF..." : uploadStatus === "success" ? "注入成功！" : "上传本地知识库"}
               </span>
-              <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
+              <input type="file" accept=".pdf,.txt" className="hidden" onChange={handleFileUpload} />
             </label>
           </div>
         </div>
@@ -334,7 +366,6 @@ export default function MindVaultChat() {
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          // 🎨 视觉升级 1：丝滑的代码高亮块 (带仿 Mac 视窗头部)
                           code(props: any) {
                             const { children, className, node, ...rest } = props;
                             const match = /language-(\w+)/.exec(className || '');
@@ -359,13 +390,11 @@ export default function MindVaultChat() {
                                 </SyntaxHighlighter>
                               </div>
                             ) : (
-                              // 行内代码的高亮
                               <code className="bg-blue-500/10 text-blue-300 px-1.5 py-0.5 rounded text-[13px] font-mono border border-blue-500/20" {...rest}>
                                 {children}
                               </code>
                             )
                           },
-                          // 💻 视觉升级 2：极客风终端日志 (自动捕捉后端发来的 "> 💻 战略指派" 等文字)
                           blockquote({node, children, ...props}) {
                             return (
                               <blockquote className="my-3 pl-4 border-l-2 border-emerald-500/50 bg-emerald-500/5 py-2.5 pr-4 rounded-r-lg shadow-inner" {...props}>
@@ -375,7 +404,6 @@ export default function MindVaultChat() {
                               </blockquote>
                             )
                           },
-                          // 📊 视觉升级 3：SaaS 级精美数据表格
                           table({node, ...props}) {
                             return <div className="overflow-x-auto my-5 rounded-lg border border-white/10"><table className="w-full text-sm text-left border-collapse" {...props} /></div>
                           },
@@ -385,11 +413,10 @@ export default function MindVaultChat() {
                           td({node, ...props}) {
                             return <td className="px-4 py-3 border-b border-white/5 text-gray-300" {...props} />
                           },
-                          // 🖼️ 视觉升级 4：沙盒图表的全息悬浮投影
                           img({node, ...props}) {
                             return (
                               <div className="my-5 p-2 rounded-xl bg-white/5 border border-white/10 inline-block shadow-2xl">
-                                <img className="rounded-lg max-w-full h-auto object-contain max-h-[400px]" {...props} alt="数据可视化图表" />
+                                <img className="rounded-lg max-w-full h-auto object-contain max-h-[400px]" {...props} alt="数据图表" />
                               </div>
                             )
                           }
@@ -426,6 +453,7 @@ export default function MindVaultChat() {
           </div>
         </main>
 
+        {/* ================= 输入区 ================= */}
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent pt-10 pb-6 px-4">
           <div className="max-w-3xl mx-auto relative group">
             <div className="absolute -top-10 left-0 flex gap-2">
@@ -440,30 +468,66 @@ export default function MindVaultChat() {
                 全球雷达
               </button>
             </div>
+
+            {/* 👁️ 视觉觉醒：图片预览悬浮窗 */}
+            {imageBase64 && (
+              <div className="absolute -top-16 right-0 bg-[#1e1e1e] border border-emerald-500/30 rounded-lg p-1 shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                <div className="w-10 h-10 rounded overflow-hidden bg-black flex items-center justify-center">
+                  <img src={`data:image/jpeg;base64,${imageBase64}`} alt="预览" className="w-full h-full object-cover opacity-80" />
+                </div>
+                <div className="flex flex-col pr-2">
+                  <span className="text-xs text-emerald-400 font-medium">视觉感官已挂载</span>
+                  <span className="text-[10px] text-gray-500">发送即可触发看图分析</span>
+                </div>
+                <button onClick={() => setImageBase64("")} className="p-1 hover:bg-white/10 rounded-full text-gray-400 hover:text-white mr-1 transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             <div className="relative flex items-end w-full bg-[#181818] border border-white/10 rounded-3xl shadow-2xl focus-within:ring-1 focus-within:ring-white/20 focus-within:border-white/20 transition-all duration-300 overflow-hidden">
+              
+              {/* 👁️ 视觉觉醒：隐藏的图片上传控件与触发按钮 */}
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={fileInputRef} 
+                className="hidden" 
+                onChange={handleImageUpload} 
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className={`absolute left-3 bottom-3 p-2 rounded-full transition-all duration-300 flex items-center justify-center z-10
+                  ${imageBase64 ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"}`}
+                title="挂载视觉感官 (上传图片)"
+              >
+                <ImageIcon size={18} />
+              </button>
+
               <textarea
                 ref={textareaRef}
                 value={input}
                 onChange={handleInput}
                 onKeyDown={handleKeyDown}
                 placeholder="向 MindVault 提问... (Shift + Enter 换行)"
-                className="w-full max-h-[200px] bg-transparent text-gray-100 placeholder-gray-600 px-6 py-4 resize-none outline-none text-[15px] leading-relaxed"
+                className="w-full max-h-[200px] bg-transparent text-gray-100 placeholder-gray-600 pl-12 pr-12 py-4 resize-none outline-none text-[15px] leading-relaxed"
                 rows={1}
                 disabled={isLoading}
               />
+              
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className={`absolute right-3 bottom-3 p-2 rounded-full transition-all duration-300 flex items-center justify-center
-                  ${input.trim() && !isLoading
+                disabled={(!input.trim() && !imageBase64) || isLoading}
+                className={`absolute right-3 bottom-3 p-2 rounded-full transition-all duration-300 flex items-center justify-center z-10
+                  ${(input.trim() || imageBase64) && !isLoading
                     ? "bg-white text-black hover:bg-gray-200" 
                     : "bg-white/5 text-gray-600"}`}
               >
-                <Send size={18} className={input.trim() && !isLoading ? "ml-0.5" : ""} />
+                <Send size={18} className={(input.trim() || imageBase64) && !isLoading ? "ml-0.5" : ""} />
               </button>
             </div>
             <div className="text-center mt-3 text-[11px] text-gray-600">
-              MindVault 可以运行自定义工具。信息可能会有误差，请核实重要数据。
+              MindVault 现已搭载视觉感官。信息可能会有误差，请核实重要数据。
             </div>
           </div>
         </div>
