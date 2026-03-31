@@ -158,24 +158,20 @@ export default function MindVaultChat() {
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
-          // 剥离 Base64 的头部（例如 data:image/jpeg;base64,）
           const base64String = reader.result.replace(/^data:image\/[a-z]+;base64,/, "");
           setImageBase64(base64String);
         }
       };
       reader.readAsDataURL(file);
     }
-    // 清空 input 的 value，允许连续上传同一张图片
     if (e.target) e.target.value = '';
   };
 
   // === 发送消息 ===
   const handleSend = async () => {
-    // 允许仅发送图片（没有文本时默认带上提示词）
     const effectiveInput = input.trim() || (imageBase64 ? "请帮我分析一下这张图。" : "");
     if (!effectiveInput || isLoading) return;
 
-    // 记录下要发送的图片，防止在 await 期间状态被清空
     const imageToSend = imageBase64;
     
     let displayContent = effectiveInput;
@@ -186,7 +182,7 @@ export default function MindVaultChat() {
     const userMsg: Message = { role: "user", content: displayContent };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setImageBase64(""); // 发送后立刻清空前端缓存的图片
+    setImageBase64(""); 
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setIsLoading(true);
 
@@ -197,11 +193,9 @@ export default function MindVaultChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, { role: "user", content: effectiveInput }], // 发送给后端的纯文本
-          mode: "researcher",
-          use_web_search: useWebSearch,
-          session_id: sessionId || `user_fallback_${Date.now()}`,
-          image_base64: imageToSend // 👁️ 视觉觉醒：将图片数据发送给后端
+          messages: [...messages, { role: "user", content: effectiveInput }], 
+          user_id: sessionId || `user_fallback_${Date.now()}`,
+          image_base64: imageToSend 
         }),
       });
 
@@ -283,7 +277,7 @@ export default function MindVaultChat() {
           </button>
 
           <div className="flex-1 overflow-y-auto pr-1">
-            <h3 className="text-xs font-semibold text-gray-500 mb-3 px-2">历史知识库检索</h3>
+            <h3 className="text-xs font-semibold text-gray-500 mb-3 px-2">历史记忆库</h3>
             
             <div className="space-y-1">
               {chatHistory.map((chat) => (
@@ -318,9 +312,11 @@ export default function MindVaultChat() {
                 <Upload size={18} />
               )}
               <span className="truncate">
-                {uploadStatus === "uploading" ? "正在吞噬 PDF..." : uploadStatus === "success" ? "注入成功！" : "上传本地知识库"}
+                {/* 🔴 修改 1：文案升级，支持提示表格上传 */}
+                {uploadStatus === "uploading" ? "正在挂载数据..." : uploadStatus === "success" ? "入库成功！" : "上传知识库 / 数据表"}
               </span>
-              <input type="file" accept=".pdf,.txt" className="hidden" onChange={handleFileUpload} />
+              {/* 🔴 修改 2：增加了对 .csv, .xls, .xlsx 的支持 */}
+              <input type="file" accept=".pdf,.txt,.csv,.xls,.xlsx" className="hidden" onChange={handleFileUpload} />
             </label>
           </div>
         </div>
@@ -487,7 +483,6 @@ export default function MindVaultChat() {
 
             <div className="relative flex items-end w-full bg-[#181818] border border-white/10 rounded-3xl shadow-2xl focus-within:ring-1 focus-within:ring-white/20 focus-within:border-white/20 transition-all duration-300 overflow-hidden">
               
-              {/* 👁️ 视觉觉醒：隐藏的图片上传控件与触发按钮 */}
               <input 
                 type="file" 
                 accept="image/*" 
@@ -527,7 +522,7 @@ export default function MindVaultChat() {
               </button>
             </div>
             <div className="text-center mt-3 text-[11px] text-gray-600">
-              MindVault 现已搭载视觉感官。信息可能会有误差，请核实重要数据。
+              MindVault 现已搭载数据仓库与视觉感官。
             </div>
           </div>
         </div>
