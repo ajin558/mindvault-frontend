@@ -264,16 +264,33 @@ export default function MindVaultChat() {
 
           {graphData.nodes.length > 0 ? (
             <div className="w-full h-full cursor-move">
+              {graphData.nodes.length > 0 ? (
+            <div className="w-full h-full cursor-move">
               <ForceGraph3D
                 graphData={graphData}
-                nodeAutoColorBy="group"
-                nodeVal={(node: any) => node.val * 1.5} // 节点大小
+                // 🌌 节点色彩魔法：母体核心为紫色，其他普通节点为青色发光体
+                nodeColor={(node: any) => node.id === 'MindVault' ? '#b026ff' : '#00ffff'}
+                // 🌌 节点大小与发光透明度
+                nodeVal={(node: any) => Math.sqrt(node.val) * 4} 
+                nodeOpacity={0.8}
+                nodeResolution={24}
                 nodeLabel="name"
-                linkDirectionalParticles={2} // 光子流动特效
-                linkDirectionalParticleWidth={1.5}
-                linkDirectionalParticleSpeed={0.005}
-                backgroundColor="#00000000" 
+                
+                // 🌌 连线魔法：深邃幽蓝的半透明连线
+                linkColor={() => 'rgba(30, 144, 255, 0.4)'}
+                linkWidth={0.6}
+                
+                // ✨ 光子流特效：赛博朋克风的绿色光脉冲在神经元之间穿梭
+                linkDirectionalParticles={3} 
+                linkDirectionalParticleWidth={2.5}
+                linkDirectionalParticleSpeed={0.006}
+                linkDirectionalParticleColor={() => '#00ffcc'}
+                
+                // 🌃 背景：深空暗夜蓝
+                backgroundColor="#03030a" 
+                showNavInfo={false}
               />
+            </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">
