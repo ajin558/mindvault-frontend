@@ -262,9 +262,8 @@ export default function MindVaultChat() {
             <div className="text-[10px] text-gray-500 mt-2">提示：支持滚轮缩放、鼠标左键拖拽视角</div>
           </div>
 
+          {/* 🔥 修复处的正确代码，剔除了重复嵌套 */}
           {graphData.nodes.length > 0 ? (
-            <div className="w-full h-full cursor-move">
-              {graphData.nodes.length > 0 ? (
             <div className="w-full h-full cursor-move">
               <ForceGraph3D
                 graphData={graphData}
@@ -290,7 +289,6 @@ export default function MindVaultChat() {
                 backgroundColor="#03030a" 
                 showNavInfo={false}
               />
-            </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">
@@ -355,7 +353,6 @@ export default function MindVaultChat() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            {/* 🌌 新增：展开全息大脑按钮 */}
             <button 
               onClick={loadBrainGraph}
               className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-lg text-sm font-medium transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)]"
