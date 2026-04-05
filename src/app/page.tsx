@@ -427,15 +427,17 @@ export default function MindVaultChat() {
                           th({node, ...props}) { return <th className="px-4 py-3 bg-white/5 border-b border-white/10 font-semibold text-gray-200 whitespace-nowrap" {...props} /> },
                           td({node, ...props}) { return <td className="px-4 py-3 border-b border-white/5 text-gray-300" {...props} /> },
                           
-                          // 🔥 这里是修复图片不显示的核心逻辑！
+                          // 🔥 修复 Vercel 编译报错与图片路径问题
                           img({node, ...props}) {
-                            let imgSrc = props.src || '';
+                            let imgSrc = props.src;
                             
-                            // 探测是否为相对路径（即不包含 http://, https://, 也不是 data:base64 格式）
-                            if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('data:')) {
-                              // 如果你给服务器配了域名且是 HTTPS，请替换下面的 IP 为域名（例如: https://api.xxx.com）
-                              // NEXT_PUBLIC_API_URL 如果在环境变量里配了会自动读取，没配的话就用你服务器的 8000 端口
-                              const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://47.93.151.189:8000";
+                            // 🚨 修复 Vercel 类型报错：强制判断必须是 string 类型才能调用 startsWith
+                            if (typeof imgSrc === 'string' && !imgSrc.startsWith('http') && !imgSrc.startsWith('data:')) {
+                              
+                              // 💡 替换成你自己的域名！
+                              // 如果你在 Vercel 环境变量配了 NEXT_PUBLIC_API_URL 它会自动读取。
+                              // 如果没配，把下面引号里的换成你之前配置的真实 HTTPS 域名！
+                              const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "https://你的真实域名写在这里";
                               
                               // 拼接出正确的物理访问地址，防止出现双斜杠 /
                               imgSrc = `${backendBaseUrl.replace(/\/$/, '')}/${imgSrc.replace(/^\//, '')}`;
@@ -447,7 +449,7 @@ export default function MindVaultChat() {
                             return (
                               <div className="my-5 p-2 rounded-xl bg-white/5 border border-white/10 inline-block shadow-2xl">
                                 <img 
-                                  src={imgSrc} 
+                                  src={imgSrc as string} // 加上 as string 安抚 TypeScript
                                   alt={alt || "视觉快照"}
                                   className="rounded-lg max-w-full h-auto object-contain max-h-[400px]" 
                                   {...restProps} 
