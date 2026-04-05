@@ -437,7 +437,7 @@ export default function MindVaultChat() {
                               // 💡 替换成你自己的域名！
                               // 如果你在 Vercel 环境变量配了 NEXT_PUBLIC_API_URL 它会自动读取。
                               // 如果没配，把下面引号里的换成你之前配置的真实 HTTPS 域名！
-                              const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "https://你的真实域名写在这里";
+                              const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "https://47.93.151.189:8000";
                               
                               // 拼接出正确的物理访问地址，防止出现双斜杠 /
                               imgSrc = `${backendBaseUrl.replace(/\/$/, '')}/${imgSrc.replace(/^\//, '')}`;
